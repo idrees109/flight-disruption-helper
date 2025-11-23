@@ -187,10 +187,10 @@
     textarea {
       font-family: inherit;
       font-size: 0.9rem;
-      border-radius: 6px; /* sharper corners */
-      border: 1px solid #cbd5e1; /* stronger border contrast */
+      border-radius: 4px;        /* sharper corners */
+      border: 1px solid #94a3b8; /* darker border for strong contrast */
       padding: 8px 9px;
-      background: #fdfdfd; /* very light grey to stand out */
+      background: #ffffff;       /* pure white interior */
       color: var(--text-main);
       outline: none;
       transition: border-color 0.15s ease, box-shadow 0.15s ease,
@@ -678,9 +678,6 @@
 
   <script>
     // ========= CONFIG =========
-    // IMPORTANT:
-    // This HTML is a FRONTEND ONLY. DO NOT put your Gemini or flight API keys here.
-    // Instead, point API_BASE_URL to a tiny backend you control.
     const API_BASE_URL = "https://flight-disruption-helper.vercel.app";
 
     const form = document.getElementById("disruption-form");
