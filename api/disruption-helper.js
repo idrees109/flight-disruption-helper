@@ -9,7 +9,14 @@ export default async function handler(req, res) {
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
   const FLIGHT_API_KEY = process.env.FLIGHT_API_KEY;   // AeroDataBox
   const PLACES_API_KEY = process.env.PLACES_API_KEY;   // (optional – for hotels later)
+// Debug: check that keys are visible on the server
+  console.log("Has keys?", {
+    hasGemini: !!GEMINI_API_KEY,
+    hasFlight: !!FLIGHT_API_KEY,
+    hasPlaces: !!PLACES_API_KEY,
+  });
 
+  // ...rest of your code (reading body, calling Gemini, etc.)
   if (!GEMINI_API_KEY) {
     return res.status(500).json({
       error: "Server is missing GEMINI_API_KEY. Check Vercel environment variables.",
@@ -173,9 +180,3 @@ Do not use bullet points. No markdown headings. Just text.
     hotels: [],   // and add Places-based suggestions later
   });
 }
-  console.log("Has keys?", {
-    hasGemini: !!GEMINI_API_KEY,
-    hasFlight: !!FLIGHT_API_KEY,
-    hasPlaces: !!PLACES_API_KEY,
-  });
-
