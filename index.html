@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Flight Disruption & Compensation Helper</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-soft: #020617;
+      --card-bg: #020617;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.1);
+      --accent-strong: #06b6d4;
+      --error: #f97373;
+      --text-main: #e5e7eb;
+      --text-soft: #9ca3af;
+      --border-subtle: #1e293b;
+      --radius-xl: 18px;
+      --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.55);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1f2933 0, #020617 45%, #000 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .page {
+      max-width: 1100px;
+      width: 100%;
+      padding: 24px 16px 32px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      color: var(--text-soft);
+      font-size: 12px;
+      width: fit-content;
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 6px rgba(56, 189, 248, 0.25);
+    }
+
+    h1 {
+      font-size: clamp(1.6rem, 2.4vw, 2.1rem);
+      margin: 0;
+      letter-spacing: -0.03em;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4ch;
+    }
+
+    h1 span.highlight {
+      background: linear-gradient(to right, var(--accent), var(--accent-strong));
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .subtitle {
+      font-size: 0.95rem;
+      color: var(--text-soft);
+      max-width: 620px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
+      gap: 18px;
+      align-items: flex-start;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.18), transparent 60%),
+                  var(--bg-soft);
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      padding: 18px 18px 16px;
+      box-shadow: var(--shadow-soft);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 10% 0%, rgba(56, 189, 248, 0.15), transparent 60%);
+      opacity: 0.8;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .card-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .card-title h2 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: #e2e8f0;
+    }
+
+    .card-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-soft);
+      margin-bottom: 12px;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+    }
+
+    .field label {
+      color: var(--text-soft);
+      font-weight: 500;
+    }
+
+    .field span.hint {
+      font-size: 0.75rem;
+      color: var(--text-soft);
+    }
+
+    input, select, textarea {
+      font-family: inherit;
+      font-size: 0.9rem;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      padding: 8px 9px;
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: #64748b;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.8);
+      background: rgba(15, 23, 42, 1);
+    }
+
+    textarea {
+      min-height: 72px;
+      resize: vertical;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .pill {
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      font-size: 0.75rem;
+      color: var(--text-soft);
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+      align-items: center;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 999px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      padding: 8px 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.2s ease;
+    }
+
+    .btn-primary {
+      background: radial-gradient(circle at top left, var(--accent-strong), var(--accent));
+      color: #0b1120;
+      font-weight: 600;
+      box-shadow: 0 14px 30px rgba(56, 189, 248, 0.35);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 45px rgba(56, 189, 248, 0.45);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 10px 25px rgba(56, 189, 248, 0.35);
+    }
+
+    .btn-secondary {
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--text-soft);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: rgba(15, 23, 42, 1);
+    }
+
+    button:disabled {
+      opacity: 0.65;
+      cursor: default;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .btn-icon {
+      font-size: 1rem;
+    }
+
+    .disclaimer {
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: var(--text-soft);
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.85);
+      padding: 8px 9px;
+      border: 1px dashed rgba(148, 163, 184, 0.4);
+    }
+
+    /* Results */
+
+    #results {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 120px;
+    }
+
+    .results-empty {
+      font-size: 0.85rem;
+      color: var(--text-soft);
+      border-radius: 12px;
+      border: 1px dashed rgba(148, 163, 184, 0.4);
+      padding: 12px 10px;
+      background: rgba(15, 23, 42, 0.85);
+    }
+
+    .status-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-soft);
+    }
+
+    .status-chip strong {
+      color: #e5e7eb;
+      font-weight: 600;
+    }
+
+    .status-chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .section {
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      padding: 10px 10px 8px;
+    }
+
+    .section-title {
+      font-size: 0.83rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #e2e8f0;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .section-title span.sub {
+      font-size: 0.7rem;
+      color: var(--text-soft);
+      text-transform: none;
+      letter-spacing: normal;
+    }
+
+    .section-body {
+      font-size: 0.86rem;
+      color: var(--text-soft);
+    }
+
+    .section-body p {
+      margin: 4px 0 6px;
+    }
+
+    .options-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .options-list li {
+      border-radius: 10px;
+      padding: 7px 8px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+
+    .options-list li strong {
+      color: #e5e7eb;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .message-block {
+      margin-top: 4px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px;
+      align-items: stretch;
+    }
+
+    .message-block textarea {
+      font-size: 0.8rem;
+      padding: 7px 8px;
+      min-height: 74px;
+    }
+
+    .btn-copy {
+      align-self: flex-start;
+      padding-inline: 10px;
+      padding-block: 7px;
+      font-size: 0.8rem;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      color: var(--text-soft);
+    }
+
+    .hotel-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
+    }
+
+    .hotel-list li {
+      border-radius: 10px;
+      padding: 7px 8px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      font-size: 0.84rem;
+    }
+
+    .hotel-list a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .hotel-list a:hover {
+      text-decoration: underline;
+    }
+
+    .loading {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--text-soft);
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      border: 2px solid rgba(148, 163, 184, 0.3);
+      border-top-color: var(--accent);
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .error-text {
+      color: var(--error);
+      font-size: 0.8rem;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <div class="badge">
+        <span class="badge-dot"></span>
+        AI Flight Disruption Helper · beta
+      </div>
+      <h1>
+        Check your <span class="highlight">compensation & options</span> in seconds.
+      </h1>
+      <p class="subtitle">
+        Enter your flight details and what went wrong. We’ll check typical
+        compensation eligibility, suggest next-best options, and draft messages
+        you can send to your airline or agent.
+      </p>
+    </header>
+
+    <section class="layout">
+      <!-- LEFT: FORM CARD -->
+      <section class="card">
+        <div class="card-content">
+          <div class="card-title">
+            <h2>1. Flight & disruption details</h2>
+          </div>
+          <p class="card-subtitle">
+            We’ll never store personal data beyond what’s needed to show your result.
+          </p>
+
+          <form id="disruption-form">
+            <div class="field-row">
+              <div class="field">
+                <label for="from">From (airport or city)</label>
+                <input id="from" name="from" type="text" placeholder="e.g. LHR or London" required />
+              </div>
+              <div class="field">
+                <label for="to">To (airport or city)</label>
+                <input id="to" name="to" type="text" placeholder="e.g. NRT or Tokyo" required />
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="airline">Airline</label>
+                <input id="airline" name="airline" type="text" placeholder="e.g. Qatar Airways" required />
+              </div>
+              <div class="field">
+                <label for="flightNumber">Flight number</label>
+                <input id="flightNumber" name="flightNumber" type="text" placeholder="e.g. QR808" required />
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="flightDate">Flight date</label>
+                <input id="flightDate" name="flightDate" type="date" required />
+              </div>
+              <div class="field">
+                <label for="issueType">What happened?</label>
+                <select id="issueType" name="issueType" required>
+                  <option value="">Select one</option>
+                  <option value="delay">Delayed</option>
+                  <option value="cancellation">Cancelled</option>
+                  <option value="missed_connection">Missed connection</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-row" id="delay-row">
+              <div class="field">
+                <label for="delayMinutes">Delay (minutes)</label>
+                <input
+                  id="delayMinutes"
+                  name="delayMinutes"
+                  type="number"
+                  min="0"
+                  step="5"
+                  placeholder="e.g. 180"
+                />
+                <span class="hint">Approximate is fine.</span>
+              </div>
+              <div class="field">
+                <label for="cause">Cause (if known)</label>
+                <select id="cause" name="cause">
+                  <option value="">Not sure</option>
+                  <option value="airline">Airline / crew / technical</option>
+                  <option value="weather">Weather</option>
+                  <option value="atc">Air traffic control / airport</option>
+                  <option value="strike">Strike</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="region">Route region</label>
+                <select id="region" name="region">
+                  <option value="">Let the assistant infer</option>
+                  <option value="eu_uk">EU / UK flight (EU261 / UK261)</option>
+                  <option value="asia">Asia</option>
+                  <option value="americas">Americas</option>
+                  <option value="other">Other / mixed</option>
+                </select>
+                <span class="hint">Optional, but helps with rights explanation.</span>
+              </div>
+              <div class="field">
+                <label for="priority">What matters most?</label>
+                <select id="priority" name="priority">
+                  <option value="earliest">Arrive as early as possible</option>
+                  <option value="cheapest">Keep extra cost as low as possible</option>
+                  <option value="comfort">Avoid overnight stays if possible</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="extraContext">Anything else that matters?</label>
+              <textarea
+                id="extraContext"
+                name="extraContext"
+                placeholder="Travelling with kids, have a non-refundable hotel, important meeting, etc."
+              ></textarea>
+            </div>
+
+            <div class="pill-row">
+              <div class="pill">We only show educational guidance</div>
+              <div class="pill">No legal or financial advice</div>
+            </div>
+
+            <div class="btn-row">
+              <button type="submit" class="btn-primary" id="submitBtn">
+                <span class="btn-icon">✈️</span>
+                <span>Analyze disruption</span>
+              </button>
+              <button type="button" class="btn-secondary" id="resetBtn">
+                Reset
+              </button>
+              <div id="loadingIndicator" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <span>Checking status & drafting advice…</span>
+              </div>
+            </div>
+
+            <p class="disclaimer">
+              This tool gives general, educational guidance based on typical airline
+              practices and public regulations. Final decisions always depend on the
+              airline, local law, and your specific booking conditions.
+            </p>
+
+            <div id="error" class="error-text" style="display: none;"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- RIGHT: RESULTS CARD -->
+      <section class="card">
+        <div class="card-content">
+          <div class="card-title">
+            <h2>2. Result & AI-generated guidance</h2>
+          </div>
+          <p class="card-subtitle">
+            You can copy any text and send it to your airline, agent, or insurance provider.
+          </p>
+
+          <div id="results">
+            <div class="results-empty">
+              Fill in your flight details and click
+              <strong>Analyze disruption</strong> to see:
+              <ul style="margin: 6px 0 0 16px; padding: 0; font-size: 0.82rem;">
+                <li>Compensation / refund likelihood</li>
+                <li>Suggested next-best options</li>
+                <li>Ready-made messages you can copy</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    // ========= CONFIG =========
+    // IMPORTANT:
+    // This HTML is a FRONTEND ONLY. Do NOT put your Gemini or flight API keys here.
+    // Instead, point API_BASE_URL to a tiny backend you control (Node/Python/Cloud Function, etc.)
+    // that calls:
+    //   - Gemini API (for explanations & messages)
+    //   - Flight status API (Aviationstack / AeroDataBox / etc.)
+    //   - (Optional) Google Places API for nearby hotels
+    //
+    // The backend should expose a POST /api/disruption-helper endpoint that accepts
+    // the payload we send below and returns a JSON response in the format
+    // documented further down in this file.
+    const API_BASE_URL = "https://your-backend.example.com"; // <-- change this
+
+    const form = document.getElementById("disruption-form");
+    const resultsEl = document.getElementById("results");
+    const loadingEl = document.getElementById("loadingIndicator");
+    const submitBtn = document.getElementById("submitBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const errorEl = document.getElementById("error");
+    const issueTypeEl = document.getElementById("issueType");
+    const delayRowEl = document.getElementById("delay-row");
+
+    // Show/hide delay field based on issue type
+    issueTypeEl.addEventListener("change", () => {
+      const type = issueTypeEl.value;
+      if (!type || type === "cancellation") {
+        delayRowEl.style.display = "none";
+        document.getElementById("delayMinutes").value = "";
+      } else {
+        delayRowEl.style.display = "grid";
+      }
+    });
+    // Initialize
+    delayRowEl.style.display = "none";
+
+    resetBtn.addEventListener("click", () => {
+      form.reset();
+      errorEl.style.display = "none";
+      delayRowEl.style.display = "none";
+      resultsEl.innerHTML = `
+        <div class="results-empty">
+          Fill in your flight details and click
+          <strong>Analyze disruption</strong> to see:
+          <ul style="margin: 6px 0 0 16px; padding: 0; font-size: 0.82rem;">
+            <li>Compensation / refund likelihood</li>
+            <li>Suggested next-best options</li>
+            <li>Ready-made messages you can copy</li>
+          </ul>
+        </div>
+      `;
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errorEl.style.display = "none";
+      errorEl.textContent = "";
+      setLoading(true);
+
+      const formData = new FormData(form);
+      const payload = {
+        from: formData.get("from")?.trim() || "",
+        to: formData.get("to")?.trim() || "",
+        airline: formData.get("airline")?.trim() || "",
+        flightNumber: formData.get("flightNumber")?.trim() || "",
+        flightDate: formData.get("flightDate") || "",
+        issueType: formData.get("issueType") || "",
+        delayMinutes: formData.get("delayMinutes")
+          ? Number(formData.get("delayMinutes"))
+          : null,
+        cause: formData.get("cause") || "",
+        region: formData.get("region") || "",
+        priority: formData.get("priority") || "earliest",
+        extraContext: formData.get("extraContext")?.trim() || "",
+      };
+
+      if (!payload.from || !payload.to || !payload.airline || !payload.flightNumber || !payload.flightDate || !payload.issueType) {
+        showError("Please fill all required fields before analyzing.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(API_BASE_URL + "/api/disruption-helper", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || "Failed to reach disruption helper API.");
+        }
+
+        const data = await response.json();
+        renderResults(data);
+      } catch (err) {
+        console.error(err);
+        showError(
+          "Sorry, something went wrong while analyzing your flight. Please try again in a moment."
+        );
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    function setLoading(isLoading) {
+      loadingEl.style.display = isLoading ? "inline-flex" : "none";
+      submitBtn.disabled = isLoading;
+    }
+
+    function showError(message) {
+      errorEl.textContent = message;
+      errorEl.style.display = "block";
+    }
+
+    // ====== RENDER RESULTS ======
+    //
+    // EXPECTED BACKEND RESPONSE SHAPE:
+    // {
+    //   "status": {
+    //     "flightNumber": "QR808",
+    //     "route": "DOH → NRT",
+    //     "disruptionType": "delay" | "cancellation" | "missed_connection" | "none",
+    //     "delayMinutes": 220,
+    //     "scheduledDepartureLocal": "2025-02-10T13:00:00",
+    //     "actualDepartureLocal": "2025-02-10T16:40:00",
+    //     "scheduledArrivalLocal": "2025-02-11T06:10:00",
+    //     "estimatedArrivalLocal": "2025-02-11T09:50:00"
+    //   },
+    //   "eligibility": {
+    //     "label": "Likely" | "Maybe" | "Unlikely",
+    //     "type": "compensation" | "refund" | "care" | "mixed",
+    //     "summary": "You may be entitled to compensation under EU261 if..."
+    //   },
+    //   "explanation": "Plain-language explanation from Gemini...",
+    //   "options": [
+    //     {
+    //       "title": "Ask airline to rebook you via Doha tonight",
+    //       "description": "This usually avoids an overnight and keeps you on the same ticket..."
+    //     }
+    //   ],
+    //   "messages": [
+    //     {
+    //       "id": "airline_claim",
+    //       "label": "Email to airline (compensation/claim)",
+    //       "text": "Dear [Airline], ..."
+    //     },
+    //     {
+    //       "id": "airport_desk",
+    //       "label": "What to say at the airport desk",
+    //       "text": "Hi, my connection has been missed because of..."
+    //     }
+    //   ],
+    //   "hotels": [
+    //     {
+    //       "name": "Airport Hotel Tokyo",
+    //       "distanceKm": 1.2,
+    //       "rating": 8.6,
+    //       "address": "1-1-1 Airport Road, Tokyo",
+    //       "mapsUrl": "https://maps.google.com/..."
+    //     }
+    //   ]
+    // }
+    function renderResults(data) {
+      const status = data.status || {};
+      const eligibility = data.eligibility || {};
+      const explanation = data.explanation || "";
+      const options = Array.isArray(data.options) ? data.options : [];
+      const messages = Array.isArray(data.messages) ? data.messages : [];
+      const hotels = Array.isArray(data.hotels) ? data.hotels : [];
+
+      const disruptionLabel =
+        status.disruptionType === "delay"
+          ? "Delayed"
+          : status.disruptionType === "cancellation"
+          ? "Cancelled"
+          : status.disruptionType === "missed_connection"
+          ? "Missed connection"
+          : "No disruption detected";
+
+      const delayText =
+        typeof status.delayMinutes === "number" && status.delayMinutes > 0
+          ? `${status.delayMinutes} min delay`
+          : "No delay reported";
+
+      const eligibilityLabel = eligibility.label || "Unknown";
+      const eligibilitySummary = eligibility.summary || "";
+
+      let statusHtml = `
+        <div class="status-chip-row">
+          <div class="status-chip">
+            <span class="status-chip-dot"></span>
+            <span>
+              <strong>${escapeHtml(disruptionLabel)}</strong>
+              ${
+                status.flightNumber
+                  ? `· ${escapeHtml(status.flightNumber)}`
+                  : ""
+              }
+            </span>
+          </div>
+          ${
+            status.route
+              ? `<div class="status-chip">
+                   <span>Route</span>
+                   <strong>${escapeHtml(status.route)}</strong>
+                 </div>`
+              : ""
+          }
+          <div class="status-chip">
+            <span>Delay</span>
+            <strong>${escapeHtml(delayText)}</strong>
+          </div>
+          <div class="status-chip">
+            <span>Eligibility</span>
+            <strong>${escapeHtml(eligibilityLabel)}</strong>
+          </div>
+        </div>
+      `;
+
+      let explanationHtml = `
+        <section class="section">
+          <div class="section-title">
+            <span>Summary & typical rights</span>
+            ${
+              eligibilitySummary
+                ? `<span class="sub">${escapeHtml(eligibilitySummary)}</span>`
+                : ""
+            }
+          </div>
+          <div class="section-body">
+            ${
+              explanation
+                ? `<p>${nl2br(escapeHtml(explanation))}</p>`
+                : `<p>We could not generate a detailed explanation this time.</p>`
+            }
+          </div>
+        </section>
+      `;
+
+      let optionsHtml = "";
+      if (options.length) {
+        const items = options
+          .map((opt) => {
+            const title = opt.title || "Option";
+            const desc = opt.description || "";
+            return `
+              <li>
+                <strong>${escapeHtml(title)}</strong>
+                ${
+                  desc
+                    ? `<span>${nl2br(escapeHtml(desc))}</span>`
+                    : ""
+                }
+              </li>
+            `;
+          })
+          .join("");
+        optionsHtml = `
+          <section class="section">
+            <div class="section-title">
+              <span>Suggested next-best options</span>
+              <span class="sub">Evaluate against your airline’s current offer.</span>
+            </div>
+            <div class="section-body">
+              <ul class="options-list">
+                ${items}
+              </ul>
+            </div>
+          </section>
+        `;
+      }
+
+      let messagesHtml = "";
+      if (messages.length) {
+        const blocks = messages
+          .map((msg, index) => {
+            const label = msg.label || `Message ${index + 1}`;
+            const text = msg.text || "";
+            const textareaId = `msg_${msg.id || index}`;
+            return `
+              <div class="section" data-message-id="${textareaId}">
+                <div class="section-title">
+                  <span>${escapeHtml(label)}</span>
+                  <span class="sub">Copy & paste this text.</span>
+                </div>
+                <div class="section-body">
+                  <div class="message-block">
+                    <textarea id="${textareaId}" readonly>${text}</textarea>
+                    <button type="button" class="btn-secondary btn-copy" data-target="${textareaId}">
+                      <span class="btn-icon">📋</span>
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+        messagesHtml = blocks;
+      }
+
+      let hotelsHtml = "";
+      if (hotels.length) {
+        const items = hotels
+          .map((h) => {
+            const name = h.name || "Hotel";
+            const distance =
+              typeof h.distanceKm === "number"
+                ? `${h.distanceKm.toFixed(1)} km`
+                : "";
+            const rating =
+              typeof h.rating === "number" ? `${h.rating.toFixed(1)}/10` : "";
+            const address = h.address || "";
+            const mapsLink = h.mapsUrl
+              ? `<a href="${encodeURI(h.mapsUrl)}" target="_blank" rel="noopener noreferrer">View on map</a>`
+              : "";
+
+            return `
+              <li>
+                <strong>${escapeHtml(name)}</strong>
+                <div class="pill-row" style="margin-top: 3px; margin-bottom: 3px;">
+                  ${
+                    distance
+                      ? `<span class="chip">~${escapeHtml(distance)} from airport</span>`
+                      : ""
+                  }
+                  ${
+                    rating
+                      ? `<span class="chip">Rating ${escapeHtml(rating)}</span>`
+                      : ""
+                  }
+                </div>
+                ${
+                  address
+                    ? `<div style="font-size:0.78rem; margin-bottom: 2px;">${escapeHtml(
+                        address
+                      )}</div>`
+                    : ""
+                }
+                ${mapsLink}
+              </li>
+            `;
+          })
+          .join("");
+
+        hotelsHtml = `
+          <section class="section">
+            <div class="section-title">
+              <span>Nearby hotel ideas</span>
+              <span class="sub">Check live prices & availability on your favourite site.</span>
+            </div>
+            <div class="section-body">
+              <ul class="hotel-list">
+                ${items}
+              </ul>
+            </div>
+          </section>
+        `;
+      }
+
+      resultsEl.innerHTML = `
+        ${statusHtml}
+        ${explanationHtml}
+        ${optionsHtml}
+        ${messagesHtml}
+        ${hotelsHtml}
+      `;
+
+      // Attach copy buttons
+      resultsEl.querySelectorAll(".btn-copy").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const targetId = btn.getAttribute("data-target");
+          const textarea = document.getElementById(targetId);
+          if (!textarea) return;
+          textarea.select();
+          textarea.setSelectionRange(0, 99999);
+          try {
+            document.execCommand("copy");
+          } catch (e) {
+            navigator.clipboard?.writeText(textarea.value).catch(() => {});
+          }
+          const original = btn.textContent;
+          btn.textContent = "Copied!";
+          setTimeout(() => {
+            btn.textContent = original;
+          }, 1300);
+        });
+      });
+    }
+
+    function escapeHtml(str) {
+      if (typeof str !== "string") return "";
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function nl2br(str) {
+      return String(str).replace(/\n/g, "<br>");
+    }
+  </script>
+</body>
+</html>
