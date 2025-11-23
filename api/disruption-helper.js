@@ -1,24 +1,22 @@
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // For now, just echo back what we got:
+  // Read keys from Vercel env
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  const FLIGHT_API_KEY = process.env.FLIGHT_API_KEY;
+  const PLACES_API_KEY = process.env.PLACES_API_KEY;
+
+  // Don't send keys back, just booleans
   return res.status(200).json({
-    status: {
-      disruptionType: "delay",
-      delayMinutes: req.body?.delayMinutes ?? null,
-      flightNumber: req.body?.flightNumber ?? "",
-      route: `${req.body?.from ?? ""} → ${req.body?.to ?? ""}`,
+    ok: true,
+    envCheck: {
+      hasGemini: !!GEMINI_API_KEY,
+      hasFlightApi: !!FLIGHT_API_KEY,
+      hasPlaces: !!PLACES_API_KEY,
     },
-    eligibility: {
-      label: "Unknown",
-      summary: "This is a placeholder response from the backend.",
-    },
-    explanation:
-      "Backend is connected! Now you can implement real logic with Gemini & flight APIs.",
-    options: [],
-    messages: [],
-    hotels: [],
+    message:
+      "Backend is connected and can see your environment variables. You can now call the real APIs.",
   });
 }
