@@ -11,12 +11,12 @@
       --bg-soft: #f3f4f6;
       --card-bg: #ffffff;
 
-      /* Warm accent similar to modern travel tools */
+      /* Warm accent */
       --accent: #f97316;              /* orange-500 */
       --accent-soft: rgba(249, 115, 22, 0.08);
       --accent-strong: #ea580c;       /* orange-600 */
 
-      /* Text + borders like a modern light theme */
+      /* Text + borders */
       --error: #dc2626;
       --text-main: #111827;
       --text-soft: #6b7280;
@@ -173,7 +173,7 @@
     }
 
     .field label {
-      color: var(--text-soft);
+      color: #374151; /* darker for more contrast */
       font-weight: 500;
     }
 
@@ -187,10 +187,10 @@
     textarea {
       font-family: inherit;
       font-size: 0.9rem;
-      border-radius: 10px;
-      border: 1px solid var(--border-subtle);
+      border-radius: 6px; /* sharper corners */
+      border: 1px solid #cbd5e1; /* stronger border contrast */
       padding: 8px 9px;
-      background: #ffffff;
+      background: #fdfdfd; /* very light grey to stand out */
       color: var(--text-main);
       outline: none;
       transition: border-color 0.15s ease, box-shadow 0.15s ease,
@@ -205,8 +205,8 @@
     input:focus,
     select:focus,
     textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35);
+      border-color: var(--accent-strong);
+      box-shadow: 0 0 0 1px rgba(234, 88, 12, 0.55); /* stronger focus ring */
       background: #ffffff;
     }
 
@@ -680,15 +680,7 @@
     // ========= CONFIG =========
     // IMPORTANT:
     // This HTML is a FRONTEND ONLY. DO NOT put your Gemini or flight API keys here.
-    // Instead, point API_BASE_URL to a tiny backend you control (Node/Python/Cloud Function, etc.)
-    // that calls:
-    //   - Gemini API (for explanations & messages)
-    //   - Flight status API (Aviationstack / AeroDataBox / etc.)
-    //   - (Optional) Google Places API for nearby hotels
-    //
-    // The backend should expose a POST /api/disruption-helper endpoint that accepts
-    // the payload we send below and returns a JSON response in the format
-    // documented further down in this file.
+    // Instead, point API_BASE_URL to a tiny backend you control.
     const API_BASE_URL = "https://flight-disruption-helper.vercel.app";
 
     const form = document.getElementById("disruption-form");
@@ -803,53 +795,6 @@
     }
 
     // ====== RENDER RESULTS ======
-    //
-    // EXPECTED BACKEND RESPONSE SHAPE:
-    // {
-    //   "status": {
-    //     "flightNumber": "QR808",
-    //     "route": "DOH → NRT",
-    //     "disruptionType": "delay" | "cancellation" | "missed_connection" | "none",
-    //     "delayMinutes": 220,
-    //     "scheduledDepartureLocal": "2025-02-10T13:00:00",
-    //     "actualDepartureLocal": "2025-02-10T16:40:00",
-    //     "scheduledArrivalLocal": "2025-02-11T06:10:00",
-    //     "estimatedArrivalLocal": "2025-02-11T09:50:00"
-    //   },
-    //   "eligibility": {
-    //     "label": "Likely" | "Maybe" | "Unlikely",
-    //     "type": "compensation" | "refund" | "care" | "mixed",
-    //     "summary": "You may be entitled to compensation under EU261 if..."
-    //   },
-    //   "explanation": "Plain-language explanation from Gemini...",
-    //   "options": [
-    //     {
-    //       "title": "Ask airline to rebook you via Doha tonight",
-    //       "description": "This usually avoids an overnight and keeps you on the same ticket..."
-    //     }
-    //   ],
-    //   "messages": [
-    //     {
-    //       "id": "airline_claim",
-    //       "label": "Email to airline (compensation/claim)",
-    //       "text": "Dear [Airline], ..."
-    //     },
-    //     {
-    //       "id": "airport_desk",
-    //       "label": "What to say at the airport desk",
-    //       "text": "Hi, my connection has been missed because of..."
-    //     }
-    //   ],
-    //   "hotels": [
-    //     {
-    //       "name": "Airport Hotel Tokyo",
-    //       "distanceKm": 1.2,
-    //       "rating": 8.6,
-    //       "address": "1-1-1 Airport Road, Tokyo",
-    //       "mapsUrl": "https://maps.google.com/..."
-    //     }
-    //   ]
-    // }
     function renderResults(data) {
       const status = data.status || {};
       const eligibility = data.eligibility || {};
