@@ -1,8 +1,9 @@
 // api/disruption-helper.js
-// Production-style backend:
-// - Uses AeroDataBox to verify flight + get real status
-// - Calls Gemini ONLY if flight is verified
-// - If flight not found, returns a clear message and NO AI fabrication
+// Production backend:
+// - Uses AeroDataBox via api.market to verify flight + get real status
+// - Calls Gemini ONLY if the flight is verified
+// - If flight is not found or cannot be verified, returns a short explanation
+//   and DOES NOT let Gemini "make up" a detailed story.
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -12,7 +13,7 @@ export default async function handler(req, res) {
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
   const FLIGHT_API_KEY = process.env.FLIGHT_API_KEY || "";
 
-  // Parse body safely
+  // ---------- Parse request body safely ----------
   let body = req.body || {};
   if (typeof body === "string") {
     try {
@@ -39,10 +40,9 @@ export default async function handler(req, res) {
 
   const route = from && to ? `${from} → ${to}` : "";
 
-  // ---------- 1) Try AeroDataBox to verify the flight ----------
+  // ---------- 1) Try to verify flight via AeroDataBox ----------
   let adbStatus = null;
-  let statusSource = "user_unverified"; // default: we haven't verified anything yet
-
+  let statusSource = "user_unverified"; // default
   if (FLIGHT_API_KEY && flightNumber && flightDate) {
     adbStatus = await fetchFlightStatusFromAeroDataBox({
       flightNumber,
@@ -53,27 +53,32 @@ export default async function handler(req, res) {
     if (adbStatus) {
       statusSource = "aerodatabox_verified";
     } else {
-      statusSource = "user_not_found"; // explicitly: API did not find the flight
+      statusSource = "user_not_found"; // API checked but did not find this flight
     }
-  } else {
-    statusSource = "user_no_api"; // we couldn't even call the API
+  } else if (!FLIGHT_API_KEY) {
+    statusSource = "user_no_api"; // we don't have a flight API key configured
   }
 
   // ---------- 2) Decide disruption type & delay ----------
-  let disruptionType = issueType || "delay";
-  let effectiveDelay =
-    typeof delayMinutes === "number" ? delayMinutes : null;
+  let disruptionType = "unknown";
+  let effectiveDelay = null;
 
   if (statusSource === "aerodatabox_verified" && adbStatus) {
-    if (adbStatus.disruptionType) {
-      disruptionType = adbStatus.disruptionType;
-    }
-    if (typeof adbStatus.delayMinutes === "number") {
-      effectiveDelay = adbStatus.delayMinutes;
-    }
+    // ✅ We trust AeroDataBox and IGNORE any user-entered delay/type.
+    disruptionType = adbStatus.disruptionType || "none";
+    effectiveDelay =
+      typeof adbStatus.delayMinutes === "number"
+        ? adbStatus.delayMinutes
+        : null;
+  } else {
+    // Unverified cases – we can still show what user typed in the UI,
+    // but we will NOT feed this into Gemini.
+    disruptionType = issueType || "unknown";
+    effectiveDelay =
+      typeof delayMinutes === "number" ? delayMinutes : null;
   }
 
-  // ---------- 3) Eligibility (simple rule) ----------
+  // ---------- 3) Eligibility (simple rules) ----------
   const eligibility = buildEligibility(disruptionType, effectiveDelay);
 
   // ---------- 4) Explanation logic ----------
@@ -81,8 +86,8 @@ export default async function handler(req, res) {
   let explanationFromAI = false;
 
   if (statusSource === "aerodatabox_verified" && GEMINI_API_KEY) {
-    // ✅ Flight verified by AeroDataBox – safe to ask Gemini for a detailed explanation
-    explanation = await buildExplanationWithGemini({
+    // ✅ Flight verified AND we have Gemini -> safe to generate detailed guidance
+    explanation = await buildVerifiedExplanationWithGemini({
       GEMINI_API_KEY,
       from,
       to,
@@ -95,49 +100,27 @@ export default async function handler(req, res) {
       region,
       priority,
       extraContext,
-      statusSource,
     });
     explanationFromAI = true;
-  } else if (!FLIGHT_API_KEY) {
-    // No flight API at all – we can optionally still use Gemini,
-    // but clearly say that the flight is NOT verified.
-    if (GEMINI_API_KEY) {
-      explanation = await buildUnverifiedExplanationWithGemini({
-        GEMINI_API_KEY,
-        from,
-        to,
-        airline,
-        flightNumber,
-        flightDate,
-        disruptionType,
-        effectiveDelay,
-        cause,
-        region,
-        priority,
-        extraContext,
-      });
-      explanationFromAI = true;
-    } else {
-      explanation =
-        "We could not verify this flight because no flight status API is configured. " +
-        "Please double-check your flight number, airline, and date on the airline's website. " +
-        "We also cannot generate an AI explanation right now.";
-    }
   } else if (statusSource === "user_not_found") {
-    // ❌ Flight API actively said “no such flight”
+    // ❌ Flight API could not find this flight -> no Gemini, short honest message
     explanation =
-      "We could not find this flight in our status database for the date you entered. " +
+      "We couldn’t find this flight in our status database for the date you entered. " +
       "Please double-check your flight number, airline, and travel date against your booking, " +
       "boarding pass, or the airline’s official website. Because the flight could not be verified, " +
-      "we are not generating a detailed AI explanation based on this data.";
-  } else {
-    // Some other fallback case
+      "we’re not generating a detailed AI explanation based on this data.";
+  } else if (statusSource === "user_no_api") {
     explanation =
-      "We could not reliably verify this flight. Please double-check your details on the airline's website. " +
+      "We don’t have access to a live flight-status API right now, so we can’t verify this flight. " +
+      "Please check the latest status directly on your airline’s website or app for accurate information.";
+  } else {
+    // user_unverified or any other fallback
+    explanation =
+      "We couldn’t reliably verify this flight. Please double-check your details on the airline’s website. " +
       "No AI-generated explanation is shown for unverified flight information.";
   }
 
-  // ---------- 5) Build final response ----------
+  // ---------- 5) Build final JSON response ----------
   return res.status(200).json({
     status: {
       flightNumber,
@@ -148,7 +131,7 @@ export default async function handler(req, res) {
       actualDepartureLocal: adbStatus?.actualDepartureLocal || null,
       scheduledArrivalLocal: adbStatus?.scheduledArrivalLocal || null,
       estimatedArrivalLocal: adbStatus?.estimatedArrivalLocal || null,
-      source: statusSource, // "aerodatabox_verified", "user_not_found", etc.
+      source: statusSource, // "aerodatabox_verified", "user_not_found", "user_no_api", "user_unverified"
     },
     eligibility,
     explanation,
@@ -165,7 +148,9 @@ export default async function handler(req, res) {
   });
 }
 
-// ---------- Helper: call AeroDataBox (this part we already proved works) ----------
+// =====================================================================
+// HELPER: Call AeroDataBox via api.market
+// =====================================================================
 
 async function fetchFlightStatusFromAeroDataBox({
   flightNumber,
@@ -175,6 +160,8 @@ async function fetchFlightStatusFromAeroDataBox({
   if (!flightNumber || !flightDate || !FLIGHT_API_KEY) return null;
 
   try {
+    // Pattern proven from your Java example:
+    // https://prod.api.market/api/v1/aedbx/aerodatabox/flights/Number/QR629/2025-11-23?dateLocalRole=Both&withAircraftImage=false&withLocation=false
     const url =
       "https://prod.api.market/api/v1/aedbx/aerodatabox/flights/Number/" +
       encodeURIComponent(flightNumber) +
@@ -272,7 +259,9 @@ async function fetchFlightStatusFromAeroDataBox({
   }
 }
 
-// ---------- Helper: simple eligibility rules ----------
+// =====================================================================
+// HELPER: Simple eligibility logic
+// =====================================================================
 
 function buildEligibility(disruptionType, delayMinutes) {
   let label = "Unknown";
@@ -306,9 +295,11 @@ function buildEligibility(disruptionType, delayMinutes) {
   };
 }
 
-// ---------- Helper: Gemini explanation for VERIFIED flights ----------
+// =====================================================================
+// HELPER: Gemini explanation for VERIFIED flights only
+// =====================================================================
 
-async function buildExplanationWithGemini(params) {
+async function buildVerifiedExplanationWithGemini(params) {
   const {
     GEMINI_API_KEY,
     from,
@@ -322,18 +313,17 @@ async function buildExplanationWithGemini(params) {
     region,
     priority,
     extraContext,
-    statusSource,
   } = params;
 
   if (!GEMINI_API_KEY) return "";
 
   const delayLabel =
-    typeof effectiveDelay === "number" && effectiveDelay > 0
+    typeof effectiveDelay === "number"
       ? `${effectiveDelay} minutes`
-      : "unknown / not provided";
+      : "no clear delay reported";
 
   const userSummary = `
-Flight details (verified by flight status API):
+Flight details (verified by flight-status API):
 - Route: ${from || "?"} → ${to || "?"}
 - Airline: ${airline || "?"}
 - Flight: ${flightNumber || "?"}
@@ -341,7 +331,7 @@ Flight details (verified by flight status API):
 
 Status:
 - Disruption type: ${disruptionType}
-- Delay (if any): ${delayLabel}
+- Delay: ${delayLabel}
 
 Other context:
 - Cause (if known): ${cause || "not specified"}
@@ -353,7 +343,7 @@ Other context:
   const systemInstructions = `
 You are an assistant helping travellers understand typical airline disruption handling.
 
-The flight status and delay information in the context is VERIFIED by a flight-status API.
+The flight status and delay information in the context has been VERIFIED by a flight-status API.
 
 You MUST:
 1. Provide a concise plain-language explanation of what the traveller can typically expect (rebooking, support, compensation).
@@ -373,68 +363,9 @@ You MUST:
   return await callGemini(GEMINI_API_KEY, systemInstructions, userSummary);
 }
 
-// ---------- Helper: Gemini explanation when flight NOT verified ----------
-
-async function buildUnverifiedExplanationWithGemini(params) {
-  const {
-    GEMINI_API_KEY,
-    from,
-    to,
-    airline,
-    flightNumber,
-    flightDate,
-    disruptionType,
-    effectiveDelay,
-    cause,
-    region,
-    priority,
-    extraContext,
-  } = params;
-
-  if (!GEMINI_API_KEY) return "";
-
-  const delayLabel =
-    typeof effectiveDelay === "number" && effectiveDelay > 0
-      ? `${effectiveDelay} minutes`
-      : "unknown / not provided";
-
-  const userSummary = `
-Flight details (NOT verified against any flight-status API):
-- Route (user-entered): ${from || "?"} → ${to || "?"}
-- Airline (user-entered): ${airline || "?"}
-- Flight number (user-entered): ${flightNumber || "?"}
-- Date (user-entered): ${flightDate || "?"}
-
-Disruption (user-entered):
-- Type: ${disruptionType}
-- Delay: ${delayLabel}
-- Cause (if known): ${cause || "not specified"}
-
-Other context (user-entered):
-- Region context: ${region || "let the assistant infer from route"}
-- Traveller priority: ${priority}
-- Extra context: ${extraContext || "none provided"}
-`.trim();
-
-  const systemInstructions = `
-You are an assistant helping travellers understand typical airline disruption handling.
-
-IMPORTANT: The flight details in the context are NOT verified. They come only from what the user typed.
-
-You MUST:
-1. Start your answer by clearly stating that the flight information could not be verified and that your explanation is generic.
-2. Provide only general guidance on what airlines often do in similar situations (rebooking, support, compensation), without implying that you know the status of this specific flight.
-3. Make it clear that:
-   - you cannot give legal or financial advice,
-   - final decisions depend on the airline, booking conditions, and local law.
-4. Do NOT invent concrete facts about this specific flight (no specific timings, airport operations, or decisions).
-5. Write in clear, simple English, 2–3 short paragraphs. No bullet points, no headings.
-`.trim();
-
-  return await callGemini(GEMINI_API_KEY, systemInstructions, userSummary);
-}
-
-// ---------- Helper: low-level Gemini caller ----------
+// =====================================================================
+// HELPER: Low-level Gemini caller
+// =====================================================================
 
 async function callGemini(apiKey, systemInstructions, userSummary) {
   try {
