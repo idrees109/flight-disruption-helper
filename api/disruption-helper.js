@@ -173,3 +173,9 @@ Do not use bullet points. No markdown headings. Just text.
     hotels: [],   // and add Places-based suggestions later
   });
 }
+  console.log("Has keys?", {
+    hasGemini: !!GEMINI_API_KEY,
+    hasFlight: !!FLIGHT_API_KEY,
+    hasPlaces: !!PLACES_API_KEY,
+  });
+
