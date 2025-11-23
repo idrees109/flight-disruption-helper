@@ -6,27 +6,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
-    :root {
-  /* Light, clean background */
-  --bg: #f9fafb;
-  --bg-soft: #f3f4f6;
-  --card-bg: #ffffff;
+      /* Light, clean background */
+      --bg: #f9fafb;
+      --bg-soft: #f3f4f6;
+      --card-bg: #ffffff;
 
-  /* Warm accent similar to other tools / buttons */
-  --accent: #f97316;              /* orange-500 */
-  --accent-soft: rgba(249, 115, 22, 0.08);
-  --accent-strong: #ea580c;       /* orange-600 */
+      /* Warm accent similar to modern travel tools */
+      --accent: #f97316;              /* orange-500 */
+      --accent-soft: rgba(249, 115, 22, 0.08);
+      --accent-strong: #ea580c;       /* orange-600 */
 
-  /* Text + borders like a modern light theme */
-  --error: #dc2626;
-  --text-main: #111827;
-  --text-soft: #6b7280;
-  --border-subtle: #e5e7eb;
+      /* Text + borders like a modern light theme */
+      --error: #dc2626;
+      --text-main: #111827;
+      --text-soft: #6b7280;
+      --border-subtle: #e5e7eb;
 
-  --radius-xl: 18px;
-  --shadow-soft: 0 16px 35px rgba(15, 23, 42, 0.12);
-}
-
+      --radius-xl: 18px;
+      --shadow-soft: 0 16px 35px rgba(15, 23, 42, 0.12);
     }
 
     * {
@@ -37,7 +34,7 @@
       margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
         "Segoe UI", sans-serif;
-        background: var(--bg);
+      background: var(--bg);
       color: var(--text-main);
       min-height: 100vh;
       display: flex;
@@ -65,8 +62,8 @@
       gap: 8px;
       padding: 4px 10px;
       border-radius: 999px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
       color: var(--text-soft);
       font-size: 12px;
       width: fit-content;
@@ -77,7 +74,7 @@
       height: 7px;
       border-radius: 999px;
       background: var(--accent);
-      box-shadow: 0 0 0 6px rgba(56, 189, 248, 0.25);
+      box-shadow: 0 0 0 6px var(--accent-soft);
     }
 
     h1 {
@@ -116,11 +113,9 @@
     }
 
     .card {
-      background: radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 55%),
-                  radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.18), transparent 60%),
-                  var(--bg-soft);
+      background: var(--card-bg);
       border-radius: var(--radius-xl);
-      border: 1px solid rgba(148, 163, 184, 0.25);
+      border: 1px solid var(--border-subtle);
       padding: 18px 18px 16px;
       box-shadow: var(--shadow-soft);
       position: relative;
@@ -128,13 +123,7 @@
     }
 
     .card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 10% 0%, rgba(56, 189, 248, 0.15), transparent 60%);
-      opacity: 0.8;
-      pointer-events: none;
-      mix-blend-mode: screen;
+      content: none;
     }
 
     .card-content {
@@ -155,7 +144,7 @@
       font-size: 1rem;
       letter-spacing: 0.02em;
       text-transform: uppercase;
-      color: #e2e8f0;
+      color: #111827;
     }
 
     .card-subtitle {
@@ -193,26 +182,32 @@
       color: var(--text-soft);
     }
 
-    input, select, textarea {
+    input,
+    select,
+    textarea {
       font-family: inherit;
       font-size: 0.9rem;
       border-radius: 10px;
       border: 1px solid var(--border-subtle);
       padding: 8px 9px;
-      background: rgba(15, 23, 42, 0.9);
+      background: #ffffff;
       color: var(--text-main);
       outline: none;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease,
+        background 0.15s ease;
     }
 
-    input::placeholder, textarea::placeholder {
-      color: #64748b;
+    input::placeholder,
+    textarea::placeholder {
+      color: #9ca3af;
     }
 
-    input:focus, select:focus, textarea:focus {
+    input:focus,
+    select:focus,
+    textarea:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.8);
-      background: rgba(15, 23, 42, 1);
+      box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35);
+      background: #ffffff;
     }
 
     textarea {
@@ -230,9 +225,10 @@
     .pill {
       padding: 4px 8px;
       border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
+      border: 1px solid var(--border-subtle);
       font-size: 0.75rem;
       color: var(--text-soft);
+      background: #f9fafb;
     }
 
     .btn-row {
@@ -253,34 +249,35 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.2s ease;
+      transition: transform 0.08s ease, box-shadow 0.08s ease,
+        background 0.2s ease;
     }
 
     .btn-primary {
-      background: radial-gradient(circle at top left, var(--accent-strong), var(--accent));
-      color: #0b1120;
+      background: linear-gradient(to right, var(--accent-strong), var(--accent));
+      color: #ffffff;
       font-weight: 600;
-      box-shadow: 0 14px 30px rgba(56, 189, 248, 0.35);
+      box-shadow: 0 10px 25px rgba(249, 115, 22, 0.35);
     }
 
     .btn-primary:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 18px 45px rgba(56, 189, 248, 0.45);
+      box-shadow: 0 14px 32px rgba(249, 115, 22, 0.45);
     }
 
     .btn-primary:active:not(:disabled) {
       transform: translateY(0);
-      box-shadow: 0 10px 25px rgba(56, 189, 248, 0.35);
+      box-shadow: 0 8px 20px rgba(249, 115, 22, 0.35);
     }
 
     .btn-secondary {
-      background: rgba(15, 23, 42, 0.85);
+      background: #ffffff;
       color: var(--text-soft);
-      border: 1px solid rgba(148, 163, 184, 0.35);
+      border: 1px solid var(--border-subtle);
     }
 
     .btn-secondary:hover:not(:disabled) {
-      background: rgba(15, 23, 42, 1);
+      background: #f3f4f6;
     }
 
     button:disabled {
@@ -299,9 +296,9 @@
       font-size: 0.75rem;
       color: var(--text-soft);
       border-radius: 10px;
-      background: rgba(15, 23, 42, 0.85);
+      background: #f9fafb;
       padding: 8px 9px;
-      border: 1px dashed rgba(148, 163, 184, 0.4);
+      border: 1px dashed var(--border-subtle);
     }
 
     /* Results */
@@ -317,9 +314,9 @@
       font-size: 0.85rem;
       color: var(--text-soft);
       border-radius: 12px;
-      border: 1px dashed rgba(148, 163, 184, 0.4);
+      border: 1px dashed var(--border-subtle);
       padding: 12px 10px;
-      background: rgba(15, 23, 42, 0.85);
+      background: #f9fafb;
     }
 
     .status-chip-row {
@@ -336,13 +333,13 @@
       padding: 4px 9px;
       border-radius: 999px;
       font-size: 0.75rem;
-      border: 1px solid rgba(148, 163, 184, 0.45);
-      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border-subtle);
+      background: #ffffff;
       color: var(--text-soft);
     }
 
     .status-chip strong {
-      color: #e5e7eb;
+      color: #111827;
       font-weight: 600;
     }
 
@@ -355,8 +352,8 @@
 
     .section {
       border-radius: 12px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: #f9fafb;
+      border: 1px solid var(--border-subtle);
       padding: 10px 10px 8px;
     }
 
@@ -364,7 +361,7 @@
       font-size: 0.83rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #e2e8f0;
+      color: #111827;
       margin-bottom: 6px;
       display: flex;
       justify-content: space-between;
@@ -400,12 +397,12 @@
     .options-list li {
       border-radius: 10px;
       padding: 7px 8px;
-      background: rgba(15, 23, 42, 0.95);
-      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
     }
 
     .options-list li strong {
-      color: #e5e7eb;
+      color: #111827;
       display: block;
       margin-bottom: 2px;
     }
@@ -422,6 +419,7 @@
       font-size: 0.8rem;
       padding: 7px 8px;
       min-height: 74px;
+      background: #ffffff;
     }
 
     .btn-copy {
@@ -438,8 +436,9 @@
       border-radius: 999px;
       padding: 2px 8px;
       font-size: 0.7rem;
-      border: 1px solid rgba(148, 163, 184, 0.5);
+      border: 1px solid var(--border-subtle);
       color: var(--text-soft);
+      background: #ffffff;
     }
 
     .hotel-list {
@@ -454,13 +453,13 @@
     .hotel-list li {
       border-radius: 10px;
       padding: 7px 8px;
-      background: rgba(15, 23, 42, 0.95);
-      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
       font-size: 0.84rem;
     }
 
     .hotel-list a {
-      color: var(--accent);
+      color: var(--accent-strong);
       text-decoration: none;
     }
 
@@ -480,7 +479,7 @@
       width: 14px;
       height: 14px;
       border-radius: 999px;
-      border: 2px solid rgba(148, 163, 184, 0.3);
+      border: 2px solid rgba(148, 163, 184, 0.4);
       border-top-color: var(--accent);
       animation: spin 0.7s linear infinite;
     }
@@ -680,7 +679,7 @@
   <script>
     // ========= CONFIG =========
     // IMPORTANT:
-    // This HTML is a FRONTEND ONLY. Do NOT put your Gemini or flight API keys here.
+    // This HTML is a FRONTEND ONLY. DO NOT put your Gemini or flight API keys here.
     // Instead, point API_BASE_URL to a tiny backend you control (Node/Python/Cloud Function, etc.)
     // that calls:
     //   - Gemini API (for explanations & messages)
@@ -690,7 +689,7 @@
     // The backend should expose a POST /api/disruption-helper endpoint that accepts
     // the payload we send below and returns a JSON response in the format
     // documented further down in this file.
-    const API_BASE_URL = "https://flight-disruption-helper.vercel.app/"; // <-- change this
+    const API_BASE_URL = "https://flight-disruption-helper.vercel.app";
 
     const form = document.getElementById("disruption-form");
     const resultsEl = document.getElementById("results");
@@ -754,7 +753,14 @@
         extraContext: formData.get("extraContext")?.trim() || "",
       };
 
-      if (!payload.from || !payload.to || !payload.airline || !payload.flightNumber || !payload.flightDate || !payload.issueType) {
+      if (
+        !payload.from ||
+        !payload.to ||
+        !payload.airline ||
+        !payload.flightNumber ||
+        !payload.flightDate ||
+        !payload.issueType
+      ) {
         showError("Please fill all required fields before analyzing.");
         setLoading(false);
         return;
@@ -969,7 +975,9 @@
                 </div>
                 <div class="section-body">
                   <div class="message-block">
-                    <textarea id="${textareaId}" readonly>${text}</textarea>
+                    <textarea id="${textareaId}" readonly>${escapeHtml(
+                      text
+                    )}</textarea>
                     <button type="button" class="btn-secondary btn-copy" data-target="${textareaId}">
                       <span class="btn-icon">📋</span>
                       Copy
@@ -996,7 +1004,9 @@
               typeof h.rating === "number" ? `${h.rating.toFixed(1)}/10` : "";
             const address = h.address || "";
             const mapsLink = h.mapsUrl
-              ? `<a href="${encodeURI(h.mapsUrl)}" target="_blank" rel="noopener noreferrer">View on map</a>`
+              ? `<a href="${encodeURI(
+                  h.mapsUrl
+                )}" target="_blank" rel="noopener noreferrer">View on map</a>`
               : "";
 
             return `
