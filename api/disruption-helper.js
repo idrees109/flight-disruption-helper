@@ -1,4 +1,112 @@
-// Call AeroDataBox via api.market using flight number + date
+// api/disruption-helper.js
+// TEST MODE: Use AeroDataBox (via api.market) to fetch flight status.
+// No Gemini in this version. Always returns 200 so the frontend doesn't show
+// the generic "something went wrong" error.
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    // This is the only non-200 we return.
+    return res.status(405).json({ error: "Method not allowed. Use POST." });
+  }
+
+  const FLIGHT_API_KEY = process.env.FLIGHT_API_KEY || "";
+
+  // Parse body safely
+  let body = req.body || {};
+  if (typeof body === "string") {
+    try {
+      body = JSON.parse(body);
+    } catch (e) {
+      console.error("Failed to parse req.body JSON:", e);
+      body = {};
+    }
+  }
+
+  const {
+    from = "",
+    to = "",
+    airline = "",
+    flightNumber = "",
+    flightDate = "",
+    issueType = "",
+    delayMinutes = null,
+  } = body;
+
+  const route = from && to ? `${from} → ${to}` : "";
+
+  // Defaults based on user input
+  let disruptionType = issueType || "delay";
+  let effectiveDelay =
+    typeof delayMinutes === "number" ? delayMinutes : null;
+  let statusSource = "user";
+  let adbStatus = null;
+  let usedAeroDataBox = false;
+
+  // Try AeroDataBox only if we have a key + number + date
+  if (FLIGHT_API_KEY && flightNumber && flightDate) {
+    adbStatus = await fetchFlightStatusFromAeroDataBox({
+      flightNumber,
+      flightDate,
+      FLIGHT_API_KEY,
+    });
+
+    if (adbStatus) {
+      usedAeroDataBox = true;
+      statusSource = "aerodatabox";
+
+      if (adbStatus.disruptionType) {
+        disruptionType = adbStatus.disruptionType;
+      }
+      if (typeof adbStatus.delayMinutes === "number") {
+        effectiveDelay = adbStatus.delayMinutes;
+      }
+    }
+  } else {
+    console.warn(
+      "AeroDataBox not called: missing key, flightNumber or flightDate",
+      { hasKey: !!FLIGHT_API_KEY, flightNumber, flightDate }
+    );
+  }
+
+  const explanation = usedAeroDataBox
+    ? "AeroDataBox returned flight data successfully. In this test mode, the delay and times shown above are taken from the flight API where available."
+    : "We could not retrieve data from the flight status API. In this test mode, the details above are based only on what you entered.";
+
+  const eligibilitySummary = usedAeroDataBox
+    ? "AeroDataBox integration test: flight API responded. Eligibility logic is not implemented in this test mode."
+    : "AeroDataBox integration test: flight API did not provide usable data. Eligibility logic is not implemented in this test mode.";
+
+  // Always return 200 here so the frontend doesn't show the generic error.
+  return res.status(200).json({
+    status: {
+      flightNumber,
+      route,
+      disruptionType,
+      delayMinutes: effectiveDelay,
+      scheduledDepartureLocal: adbStatus?.scheduledDepartureLocal || null,
+      actualDepartureLocal: adbStatus?.actualDepartureLocal || null,
+      scheduledArrivalLocal: adbStatus?.scheduledArrivalLocal || null,
+      estimatedArrivalLocal: adbStatus?.estimatedArrivalLocal || null,
+      source: statusSource, // "aerodatabox" or "user"
+    },
+    eligibility: {
+      label: "Unknown",
+      type: "mixed",
+      summary: eligibilitySummary,
+    },
+    explanation,
+    options: [],
+    messages: [],
+    hotels: [],
+    debug: {
+      usedAeroDataBox,
+      hasFlightApiKey: !!FLIGHT_API_KEY,
+    },
+  });
+}
+
+// --- Helper to call AeroDataBox flight status API ---
+
 async function fetchFlightStatusFromAeroDataBox({
   flightNumber,
   flightDate,
@@ -7,7 +115,8 @@ async function fetchFlightStatusFromAeroDataBox({
   if (!flightNumber || !flightDate || !FLIGHT_API_KEY) return null;
 
   try {
-    // Build the URL using the pattern from your Java example
+    // Pattern from your Java example:
+    // https://prod.api.market/api/v1/aedbx/aerodatabox/flights/Number/QR629/2025-11-23?dateLocalRole=Both&withAircraftImage=false&withLocation=false
     const url =
       "https://prod.api.market/api/v1/aedbx/aerodatabox/flights/Number/" +
       encodeURIComponent(flightNumber) +
@@ -21,7 +130,7 @@ async function fetchFlightStatusFromAeroDataBox({
       method: "GET",
       headers: {
         accept: "application/json",
-        "x-api-market-key": FLIGHT_API_KEY, // from Vercel env var
+        "x-api-market-key": FLIGHT_API_KEY,
       },
     });
 
